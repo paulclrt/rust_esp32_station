@@ -10,6 +10,7 @@ path = "./src/bin/main.rs"
 
 [dependencies]
 esp-hal = { version = "~1.0", features = ["esp32", "log-04", "unstable"] }
+blocking-network-stack = { git = "https://github.com/bjoernQ/blocking-network-stack.git", rev = "b3ecefc" }
 esp-rtos = { version = "0.2.0", features = [
   "esp-alloc",
   "esp-radio",
@@ -19,7 +20,7 @@ esp-rtos = { version = "0.2.0", features = [
 esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32", "log-04"] }
 log                    = { version = "0.4.27", feature = ["release_max_level_off"] }
 critical-section = "1.2.0"
-embedded-io = "0.7.1"
+embedded-io = "=0.6.1"
 esp-alloc = "0.9.0"
 esp-println = { version = "0.16.1", features = ["esp32", "log-04"] }
 esp-radio = { version = "0.17.0", features = [
@@ -43,6 +44,7 @@ smoltcp = { version = "0.12.0", default-features = false, features = [
   "socket-tcp",
   "socket-udp",
 ] }
+esp-backtrace = { version = "0.18.1", features = ["esp32", "panic-handler", "println"] }
 
 
 [profile.dev]
