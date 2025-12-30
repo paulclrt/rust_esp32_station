@@ -14,12 +14,15 @@ use esp_hal::gpio;
 use esp_hal::timer::timg::TimerGroup;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
+use esp_hal::rng;
+
+use w::mk_static;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
 
 #[esp_rtos::main]
-async fn main(_spawner: Spawner) -> ! {
+async fn main(spawner: Spawner) -> ! {
 
     // initialize peripherals: clock, watchdog, etc
     let peripherals = esp_hal::init(
@@ -28,6 +31,8 @@ async fn main(_spawner: Spawner) -> ! {
                 esp_hal::clock::CpuClock::max()
             )
         );
+    
+    esp_alloc::heap_allocator!(#[unsafe(link_section = ".dram2_uninit")] size: 98767);
 
     // initilize timer for embassy (rtos) framework
     let timer0 = TimerGroup::new(peripherals.TIMG0);
@@ -41,12 +46,30 @@ async fn main(_spawner: Spawner) -> ! {
     //     || {}, // Second core's main function.
     // );
 
+    let radio_init = mk_static!(
+        esp_radio::Controller<'static>,
+        esp_radio::init().expect("Failed to initialize wifi/ble controller")
+        );
+    let rng = rng::Rng::new();
+    let stack = w::wifi::start_wifi(radio_init, peripherals.WIFI, rng, &spawner).await;
+
+    let web_app = w::web::WebApp::default();
+    for id in 0..w::web::WEB_TASK_POOL_SIZE {
+        spawner.must_spawn(w::web::web_task(
+            id,
+            stack,
+            web_app.router,
+            web_app.config,
+        ));
+    }
+
+
     let led = gpio::Output::new(
             peripherals.GPIO2,
             gpio::Level::Low,
             gpio::OutputConfig::default()
         );
-    _spawner.spawn(blink_task(led)).unwrap();
+    spawner.spawn(blink_task(led)).unwrap();
 
 
     loop {
@@ -63,3 +86,4 @@ async fn blink_task(mut led: gpio::Output<'static>) {
         let _ = Timer::after(Duration::from_millis(300)).await;
     }
 }
+
